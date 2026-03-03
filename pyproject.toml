@@ -1,0 +1,13 @@
+[project]
+name = "tool-suggest-sgd-intents"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "aiosqlite>=0.22.1",
+    "pydantic-ai>=1.63.0",
+    "python-dotenv>=1.2.2",
+    "sentence-transformers>=5.2.3",
+    "tool-suggest @ git+ssh://git@github.com/DeepPavlov/tool-suggest.git@8135167ce66bd6ff42a65bd8c4f5d1adeb9f44df",
+]
