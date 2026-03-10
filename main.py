@@ -1,15 +1,13 @@
 import argparse
 import glob
-import inspect
 import json
 import os
 from dotenv import load_dotenv
 import random
 import time
-import uuid
 from collections import Counter
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any, Optional
 from loguru import logger
 logger.remove()
 logger.add(lambda msg: print(msg, end=""), level="INFO")
@@ -26,33 +24,15 @@ from tool_suggest.services.repository import JSONFileRepository
 from tool_suggest.services.formatter import SampleFormatter
 from tool_suggest.services.suggester import KNNSuggester
 from tool_suggest.services.embedder.openai import OpenAIEmbedder
-
-try:
-    from tool_suggest.services.selector import GreedySelector
-except Exception:
-    GreedySelector = None
-Sample = None
-for mod_path in ("tool_suggest.models", "tool_suggest.schemas", "tool_suggest.schema"):
-    try:
-        mod = __import__(mod_path, fromlist=["Sample"])
-        Sample = getattr(mod, "Sample")
-        break
-    except Exception:
-        pass
-if Sample is None:
-    raise ImportError("Cannot import Sample from tool_suggest.* (Sample).")
-
-# ---- pydantic_ai compatibility: content vs text ----
-_user_param = "content" if "content" in inspect.signature(UserPromptPart).parameters else "text"
-_asst_param = "content" if "content" in inspect.signature(TextPart).parameters else "text"
-
+from tool_suggest.services.selector import GreedySelector
+from tool_suggest.models import Sample
 
 def user_msg(text: str) -> ModelRequest:
-    return ModelRequest(parts=[UserPromptPart(**{_user_param: text})])
+    return ModelRequest(parts=[UserPromptPart(content=text)])
 
 
 def assistant_msg(text: str) -> ModelResponse:
-    return ModelResponse(parts=[TextPart(**{_asst_param: text})])
+    return ModelResponse(parts=[TextPart(content=text)])
 
 
 def _tqdm(it, **kwargs):
@@ -83,24 +63,6 @@ def intents_from_user_turn(turn: dict[str, Any]) -> list[str]:
         if intent and intent != "NONE":
             intents.append(intent)
     return sorted(set(intents))
-
-
-def make_sample(
-    *,
-    context: list[Any],
-    tools: list[str],
-    data: dict[str, Any],
-    parent_context: Optional[str] = None,
-) -> Any:
-    kwargs = dict(context=context, tools=tools, data=data, parent_context=parent_context)
-
-    fields = getattr(Sample, "model_fields", None)  # pydantic v2
-    if fields is None:
-        fields = getattr(Sample, "__fields__", {})  # pydantic v1
-    if isinstance(fields, dict) and "id" in fields:
-        kwargs["id"] = str(uuid.uuid4())
-
-    return Sample(**kwargs)
 
 
 def make_samples_from_dialogue(
@@ -135,13 +97,15 @@ def make_samples_from_dialogue(
                 continue
 
             tools = [intents[0]] if label_mode == "first" else intents
-            ctx_slice = ctx[-max_history_messages:] if max_history_messages and max_history_messages > 0 else ctx
 
             out.append(
-                make_sample(
-                    context=ctx_slice,
+                Sample(
+                    context=list(ctx),
                     tools=tools,
-                    data={"dialogue_id": dialogue.get("dialogue_id"), "services": dialogue.get("services")},
+                    data={
+                        "dialogue_id": dialogue.get("dialogue_id"),
+                        "services": dialogue.get("services"),
+                    },
                     parent_context=None,
                 )
             )
@@ -194,7 +158,12 @@ async def record_split(
     add_services_hint: bool,
 ) -> Counter:
     files = iter_dialogue_files(split_dir)
-    print(f"[record] split={split_dir} files={len(files)} chunk_size={chunk_size}")
+    logger.info(
+    "record split=%s files=%s chunk_size=%s",
+    split_dir,
+    len(files),
+    chunk_size,
+    )
 
     label_freq = Counter()
     chunk: list[Any] = []
@@ -323,7 +292,7 @@ async def run():
         if not os.path.isdir(p):
             raise FileNotFoundError(f"Split dir not found: {p}")
 
-    if args.reset_repo:
+    if args._repo:
         rp = Path(args.repo_path)
         if rp.exists():
             rp.unlink()
@@ -405,7 +374,7 @@ async def eval_topk(
 
     files = iter_dialogue_files(split_dir)
     dlg_seen = 0
-
+    full_correct_dialogs = 0
     file_iter = _tqdm(files, desc=f"eval files ({Path(split_dir).name})", unit="file")
     for fp in file_iter:
         dialogs = load_json(fp)
@@ -422,7 +391,7 @@ async def eval_topk(
                 label_mode=label_mode,
                 add_services_hint=add_services_hint,
             )
-
+            all_samples_correct = True
             for s in samples:
                 gt = set(s.tools)
                 sugg = await client.suggest(context=s.context, top_k=top_k)
@@ -433,7 +402,10 @@ async def eval_topk(
                     top1 += 1
                 if any(p in gt for p in pred):
                     topk_hit += 1
-
+                else:
+                    all_samples_correct = False
+            if all_samples_correct and samples:
+                full_correct_dialogs += 1
             if tqdm is not None and n:
                 dlg_iter.set_postfix_str(
                     f"dlg={dlg_seen}/{max_dialogues} n={n} top1={top1/n:.3f} top{top_k}={topk_hit/n:.3f}"
@@ -442,7 +414,12 @@ async def eval_topk(
         if dlg_seen >= max_dialogues:
             break
 
-    return {"n": float(n), "top1": (top1 / n if n else 0.0), f"top{top_k}": (topk_hit / n if n else 0.0)}
+    return {
+        "n": float(n),
+        "top1": (top1 / n if n else 0.0),
+        f"top{top_k}": (topk_hit / n if n else 0.0),
+        "full_correct_dialogs": (full_correct_dialogs / dlg_seen if dlg_seen else 0.0),
+    }
 
 if __name__ == "__main__":
     import asyncio
