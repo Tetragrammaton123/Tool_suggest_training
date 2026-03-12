@@ -8,6 +8,7 @@ dependencies = [
     "aiosqlite>=0.22.1",
     "pydantic-ai>=1.63.0",
     "python-dotenv>=1.2.2",
+    "ruff>=0.15.5",
     "sentence-transformers>=5.2.3",
-    "tool-suggest @ git+ssh://git@github.com/DeepPavlov/tool-suggest.git@8135167ce66bd6ff42a65bd8c4f5d1adeb9f44df",
+    "tool-suggest @ git+ssh://git@github.com/DeepPavlov/tool-suggest.git@5a587af30ca05ed0e7ef1f3a441ebfd71ee3bd42",
 ]

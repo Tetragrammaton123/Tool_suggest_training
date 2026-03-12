@@ -1,0 +1,18 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+
+[200~cat >> .gitignore <<'EOF'
+.env
+data/sgd/
+data/tool_suggest_sgd_intents.json
+.venv/
+__pycache__/
+*.pyc
+.env
+data/sgd/
+data/tool_suggest_sgd_intents.json
+.venv/
+__pycache__/
+*.pyc
