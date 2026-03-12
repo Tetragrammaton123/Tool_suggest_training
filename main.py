@@ -9,13 +9,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Optional
 from loguru import logger
-logger.remove()
-logger.add(lambda msg: print(msg, end=""), level="INFO")
-
-try:
-    from tqdm import tqdm
-except Exception:
-    tqdm = None
+from tqdm import tqdm
 
 from pydantic_ai.messages import ModelRequest, ModelResponse, UserPromptPart, TextPart
 
@@ -292,7 +286,7 @@ async def run():
         if not os.path.isdir(p):
             raise FileNotFoundError(f"Split dir not found: {p}")
 
-    if args._repo:
+    if args.reset_repo:
         rp = Path(args.repo_path)
         if rp.exists():
             rp.unlink()

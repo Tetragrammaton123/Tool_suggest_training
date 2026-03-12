@@ -2853,7 +2853,7 @@ wheels = [
 [[package]]
 name = "tool-suggest"
 version = "0.1.0"
-source = { git = "ssh://git@github.com/DeepPavlov/tool-suggest.git?rev=8135167ce66bd6ff42a65bd8c4f5d1adeb9f44df#8135167ce66bd6ff42a65bd8c4f5d1adeb9f44df" }
+source = { git = "ssh://git@github.com/DeepPavlov/tool-suggest.git?rev=5a587af30ca05ed0e7ef1f3a441ebfd71ee3bd42#5a587af30ca05ed0e7ef1f3a441ebfd71ee3bd42" }
 dependencies = [
     { name = "loguru" },
     { name = "numpy" },
@@ -2881,7 +2881,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "ruff", specifier = ">=0.15.5" },
     { name = "sentence-transformers", specifier = ">=5.2.3" },
-    { name = "tool-suggest", git = "ssh://git@github.com/DeepPavlov/tool-suggest.git?rev=8135167ce66bd6ff42a65bd8c4f5d1adeb9f44df" },
+    { name = "tool-suggest", git = "ssh://git@github.com/DeepPavlov/tool-suggest.git?rev=5a587af30ca05ed0e7ef1f3a441ebfd71ee3bd42" },
 ]
 
 [[package]]
